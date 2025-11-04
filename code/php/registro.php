@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'conexion.php';
 
 // Verificar que sea POST
 if ($_SERVER["REQUEST_METHOD"] != "POST") {

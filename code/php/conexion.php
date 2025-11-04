@@ -43,4 +43,3 @@ function cerrarConexion($conn) {
         $conn->close();
     }
 }
-?>
