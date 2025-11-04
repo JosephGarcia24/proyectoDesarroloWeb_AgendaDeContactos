@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="estilos/styles_login.css">
+    <title>Sistema de Gestión de Contactos</title>    
+</head>
+<body>
+    <!-- ================================================================ -->
+    <!-- CONTENEDOR PRINCIPAL -->
+    <!-- ================================================================ -->
+    <div class="auth-container" id="container">
+        
+        <!-- ============================================================ -->
+        <!-- FORMULARIO DE REGISTRO -->
+        <!-- ============================================================ -->
+        <div class="form-container sign-up-container">
+            <form id="signUpForm">
+                <h1>Crear Cuenta</h1>
+                <p class="subtitle">Sistema de Gestión de Contactos</p>
+                
+                <div id="mensajeSignUp" class="mensaje"></div>
+                
+                <div class="form-group">
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        id="nombre" 
+                        name="nombre"
+                        placeholder="Nombre completo" 
+                        required
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <input 
+                        type="email" 
+                        class="form-control" 
+                        id="emailSignUp" 
+                        name="email"
+                        placeholder="Correo electrónico" 
+                        required
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <input 
+                        type="password" 
+                        class="form-control" 
+                        id="passwordSignUp" 
+                        name="password"
+                        placeholder="Contraseña (mínimo 6 caracteres)" 
+                        required
+                        minlength="6"
+                    />
+                </div>
+                
+                <button type="submit" class="btn-primary" id="btnSignUp">
+                    Registrarse
+                </button>
+
+                <div class="mobile-switch">
+                    ¿Ya tienes cuenta? <a href="#" id="mobileSignIn">Inicia sesión</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- FORMULARIO DE LOGIN -->
+        <!-- ============================================================ -->
+        <div class="form-container sign-in-container">
+            <form id="signInForm">
+                <h1>Iniciar Sesión</h1>
+                <p class="subtitle">Sistema de Gestión de Contactos</p>
+                
+                <div id="mensajeSignIn" class="mensaje"></div>
+                
+                <div class="form-group">
+                    <input 
+                        type="email" 
+                        class="form-control" 
+                        id="emailSignIn" 
+                        name="email"
+                        placeholder="Correo electrónico" 
+                        required
+                        autocomplete="username"
+                    />
+                </div>
+                
+                <div class="form-group">
+                    <input 
+                        type="password" 
+                        class="form-control" 
+                        id="contrasenaSignIn" 
+                        name="contrasena"
+                        placeholder="Contraseña" 
+                        required
+                        autocomplete="current-password"
+                    />
+                </div>
+                
+                <a href="#" class="forgot-link">¿Olvidaste tu contraseña?</a>
+                
+                <button type="submit" class="btn-primary" id="btnSignIn">
+                    Iniciar Sesión
+                </button>
+
+                <div class="mobile-switch">
+                    ¿No tienes cuenta? <a href="#" id="mobileSignUp">Regístrate</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- OVERLAY DESLIZANTE -->
+        <!-- ============================================================ -->
+        <div class="overlay-container">
+            <div class="overlay">
+                <div class="overlay-panel overlay-left">
+                    <h1>¡Bienvenido!</h1>
+                    <p>Si ya tienes una cuenta, inicia sesión para acceder al sistema</p>
+                    <button class="btn-primary btn-ghost" id="signIn">
+                        Iniciar Sesión
+                    </button>
+                </div>
+                <div class="overlay-panel overlay-right">
+                    <h1>¡Hola!</h1>
+                    <p>Ingresa tus datos personales y comienza tu experiencia con nosotros</p>
+                    <button class="btn-primary btn-ghost" id="signUp">
+                        Registrarse
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================ -->
+    <!-- JAVASCRIPT -->
+    <!-- ================================================================ -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Referencias a elementos
+            const container = document.getElementById('container');
+            const signUpButton = document.getElementById('signUp');
+            const signInButton = document.getElementById('signIn');
+            const mobileSignUpButton = document.getElementById('mobileSignUp');
+            const mobileSignInButton = document.getElementById('mobileSignIn');
+            
+            const signUpForm = document.getElementById('signUpForm');
+            const signInForm = document.getElementById('signInForm');
+            
+            const btnSignUp = document.getElementById('btnSignUp');
+            const btnSignIn = document.getElementById('btnSignIn');
+            
+            const mensajeSignUp = document.getElementById('mensajeSignUp');
+            const mensajeSignIn = document.getElementById('mensajeSignIn');
+
+            // ============================================================
+            // CAMBIO ENTRE PANELES
+            // ============================================================
+            function activateSignUp() {
+                container.classList.add("right-panel-active");
+                limpiarMensajes();
+            }
+
+            function activateSignIn() {
+                container.classList.remove("right-panel-active");
+                limpiarMensajes();
+            }
+
+            if (signUpButton) signUpButton.addEventListener('click', activateSignUp);
+            if (signInButton) signInButton.addEventListener('click', activateSignIn);
+            if (mobileSignUpButton) {
+                mobileSignUpButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    activateSignUp();
+                });
+            }
+            if (mobileSignInButton) {
+                mobileSignInButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    activateSignIn();
+                });
+            }
+
+            // ============================================================
+            // FUNCIÓN: MOSTRAR MENSAJES
+            // ============================================================
+            function mostrarMensaje(elemento, texto, tipo) {
+                elemento.textContent = texto;
+                elemento.className = 'mensaje ' + tipo;
+                elemento.style.display = 'block';
+            }
+
+            function limpiarMensajes() {
+                mensajeSignUp.style.display = 'none';
+                mensajeSignUp.className = 'mensaje';
+                mensajeSignIn.style.display = 'none';
+                mensajeSignIn.className = 'mensaje';
+            }
+
+            // ============================================================
+            // SUBMIT FORMULARIO DE REGISTRO
+            // ============================================================
+            signUpForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                btnSignUp.disabled = true;
+                btnSignUp.innerHTML = '<span class="spinner-border"></span>CARGANDO...';
+                
+                const formData = new FormData(signUpForm);
+                
+                // Petición al servidor
+                fetch('php/registro.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        mostrarMensaje(mensajeSignUp, data.message || '¡Cuenta creada exitosamente!', 'success');
+                        
+                        // Resetear formulario
+                        signUpForm.reset();
+                        
+                        // Cambiar a login después de 2 segundos
+                        setTimeout(function() {
+                            activateSignIn();
+                            mostrarMensaje(mensajeSignIn, 'Ahora puedes iniciar sesión con tu cuenta', 'success');
+                        }, 2000);
+                    } else {
+                        mostrarMensaje(mensajeSignUp, data.message || 'Error al crear la cuenta', 'error');
+                    }
+                    
+                    btnSignUp.disabled = false;
+                    btnSignUp.innerHTML = 'REGISTRARSE';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarMensaje(mensajeSignUp, 'Error en la conexión. Por favor intenta nuevamente.', 'error');
+                    btnSignUp.disabled = false;
+                    btnSignUp.innerHTML = 'REGISTRARSE';
+                });
+            });
+
+            // ============================================================
+            // SUBMIT FORMULARIO DE LOGIN
+            // ============================================================
+            signInForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                btnSignIn.disabled = true;
+                btnSignIn.innerHTML = '<span class="spinner-border"></span>CARGANDO...';
+                
+                const formData = new FormData(signInForm);
+                
+                // Petición al servidor
+                fetch('php/valida.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Error en la respuesta del servidor');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        mostrarMensaje(mensajeSignIn, '¡Bienvenido! Redirigiendo...', 'success');
+                        
+                        setTimeout(function() {
+                            window.location.href = 'index.html';
+                        }, 1000);
+                    } else {
+                        mostrarMensaje(mensajeSignIn, data.message || 'Usuario o contraseña incorrectos', 'error');
+                        btnSignIn.disabled = false;
+                        btnSignIn.innerHTML = 'INICIAR SESIÓN';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    mostrarMensaje(mensajeSignIn, 'Error en la conexión. Por favor intenta nuevamente.', 'error');
+                    btnSignIn.disabled = false;
+                    btnSignIn.innerHTML = 'INICIAR SESIÓN';
+                });
+            });
+
+            // ============================================================
+            // LIMPIAR MENSAJES AL ESCRIBIR
+            // ============================================================
+            const inputs = document.querySelectorAll('.form-control');
+            inputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    const mensaje = this.closest('form').querySelector('.mensaje');
+                    if (mensaje && mensaje.style.display === 'block') {
+                        mensaje.style.opacity = '0';
+                        setTimeout(() => {
+                            mensaje.style.display = 'none';
+                            mensaje.className = 'mensaje';
+                            mensaje.style.opacity = '1';
+                        }, 300);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
