@@ -173,20 +173,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData
             });
             
+            // Verificar que la respuesta sea OK
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             
             if (data.success) {
                 mostrarToast('Contacto eliminado exitosamente', 'peligro');
                 cargarContactosDesdeDB(); // Recargar desde DB
             } else {
+                console.error('Error del servidor:', data);
                 mostrarToast(data.message || 'Error al eliminar', 'peligro');
             }
         } catch (error) {
-            console.error('Error:', error);
-            mostrarToast('Error de conexión', 'peligro');
+            console.error('Error completo:', error);
+            mostrarToast('Error de conexión: ' + error.message, 'peligro');
         }
     };
-    
+        
     /**
      * Exporta usuarios a CSV (simulado)
      * @function
