@@ -1,13 +1,11 @@
 /**
  * ============================================================================
- * SISTEMA DE GESTIÓN DE CONTACTOS
+ * SISTEMA DE GESTIÓN DE CONTACTOS - VERSIÓN CON BASE DE DATOS
  * ============================================================================
- * Aplicación web para crear, editar, filtrar y ordenar contactos de usuarios.
- * Incluye sistema de búsqueda en tiempo real, validación de formularios y
- * notificaciones toast.
+ * Aplicación web conectada a MySQL para gestión de contactos
+ * Incluye CRUD completo con comunicación asíncrona al backend
  * 
- * 
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,40 +15,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
     
     /**
-     * Array simulado de usuarios/contactos.
-     * En producción, estos datos vendrían de una API o base de datos.
-     * @type {Array<{id: number, nombre: string, telefono: number|null, email: string, fecha_cumple: string}>}
+     * Array de contactos (se carga desde la base de datos)
+     * @type {Array<Object>}
      */
-    let datosSimulados = [
-        { id: 1, nombre: 'Ana García', telefono: 5512345678, email: 'ana.garcia@ejemplo.com', fecha_cumple: '1990-03-15' },
-        { id: 2, nombre: 'Luis Pérez', telefono: 5587654321, email: 'luis.perez@ejemplo.com', fecha_cumple: '1985-11-20' },
-        { id: 3, nombre: 'Carlos Ruiz', telefono: 5555555555, email: 'carlos.ruiz@ejemplo.com', fecha_cumple: '1992-07-01' },
-        { id: 4, nombre: 'María López', telefono: 5599999999, email: 'maria.lopez@ejemplo.com', fecha_cumple: '1990-03-15' },
-        { id: 5, nombre: 'Javier Domínguez', telefono: null, email: 'javier.d@ejemplo.com', fecha_cumple: '2000-01-25' },
-    ];
-    
-    /**
-     * ID autoincremental para nuevos usuarios.
-     * @type {number}
-     */
-    let nextId = 6;
+    let datosSimulados = [];
     
     /**
      * Estado del ordenamiento actual aplicado a la lista.
-     * Valores posibles: '', 'nombre', 'fecha_cumple'
      * @type {string}
      */
     let ordenamientoActivo = '';
     
     /**
-     * Lista de usuarios filtrados y buscados (pre-ordenamiento).
+     * Lista de usuarios filtrados y buscados.
      * @type {Array}
      */
     let listaUsuariosActual = [];
 
     /**
-     * Mapeo de abreviaturas de meses a números de mes (formato 01-12).
-     * Utilizado para convertir filtros de mes del select a formato numérico.
+     * Mapeo de meses a formato numérico
      * @type {Object<string, string>}
      */
     const mesesMapping = {
@@ -60,141 +43,156 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // ========================================================================
-    // II. REFERENCIAS DEL DOM (CONSTANTES)
+    // II. REFERENCIAS DEL DOM
     // ========================================================================
 
-    /* Contenedor principal de la lista de usuarios (grid de tarjetas). */
     const listaUsuariosDiv = document.getElementById('lista-usuarios');
-
-    /* Elemento <main> que contiene el contenido principal. Se desplaza cuando se abre un panel lateral. */
     const mainContent = document.querySelector('main');
-
-    /* Contenedor donde se insertan las notificaciones toast. */
     const toastContainer = document.getElementById('toast-container');
 
-    /* Referencias a los paneles laterales desplegables de la sidebar. */
     const sidebarPanels = {
         crear: document.getElementById('form-crear-usuario-panel'),
         filtrar: document.getElementById('filtrar-opciones'),
         ordenar: document.getElementById('ordenar-opciones')
     };
 
-    /* Botón del menú principal: Crear Usuario. */
     const crearUsuarioMenuBtn = document.getElementById('crear-usuario-menu-btn');
-
-    /* Botón del menú principal: Filtrar. */
     const filtroMenuBtn = document.getElementById('filtrar-menu-btn');
-
-    /* Botón del menú principal: Ordenar. */
     const ordenarMenuBtn = document.getElementById('ordenar-menu-btn');
-
-    /* Botón del menú principal: Exportar. */
     const exportarMenuBtn = document.getElementById('exportar-menu-btn');
-
-    /* Formulario de creación de nuevos usuarios. */
     const formCrearUsuario = document.getElementById('form-crear-usuario');
 
-    /* Contenedor wrapper del buscador animado. */
     const buscadorWrapper = document.querySelector('.search-wrapper');
-
-    /* Input del buscador (campo de texto). */
     const buscadorInput = document.getElementById('buscador-menu');
-
-    /* Botón/icono del buscador (para activar/desactivar). */
     const buscadorIcon = buscadorWrapper.querySelector('.search-icon');
-
-    /* Input animado del buscador (el que se expande visualmente). */
     const buscadorInputAnimado = document.querySelector('.search-input');
 
-    /* Input del filtro: día de cumpleaños. */
     const filtroDiaInput = document.getElementById('filtro-dia-menu');
-
-    /* Select del filtro: mes de cumpleaños. */
     const filtroMesSelect = document.getElementById('filtro-mes-menu');
-
-    /* Input del filtro: año de cumpleaños. */
     const filtroAnioInput = document.getElementById('filtro-anio-menu');
-
-    /* Botón para limpiar/resetear todos los filtros de fecha. */
     const limpiarFiltroFechaBtn = document.getElementById('limpiar-filtro-fecha');
 
-    /* Botón para ordenar usuarios por nombre. */
     const ordenarNombreBtn = document.getElementById('ordenar-nombre-btn');
-
-    /* Botón para ordenar usuarios por fecha de cumpleaños. */
     const ordenarFechaBtn = document.getElementById('ordenar-fecha-btn');
 
 
     // ========================================================================
-    // III. FUNCIONES DE LÓGICA DE NEGOCIO (CRUD SIMULADO)
+    // III. FUNCIONES DE COMUNICACIÓN CON EL BACKEND
     // ========================================================================
 
     /**
-     * Carga y renderiza la lista de usuarios aplicando filtros activos.
-     * Punto de entrada principal para actualizar la UI de la lista.
+     * Carga contactos desde la base de datos
+     * @async
      * @function
      */
-    const cargarUsuarios = () => {
-        filtrarYRenderizarUsuarios();
-    };
-    
-    /**
-     * Guarda las modificaciones de un usuario editado.
-     * Actualiza el array de datos simulados y recarga la lista.
-     * 
-     * @function
-     * @param {string|number} id - ID del usuario a actualizar
-     * @param {HTMLFormElement} formularioElement - Elemento del formulario con los datos editados
-     * @returns {void}
-     */
-    const guardarEdicionUsuario = (id, formularioElement) => {
-        // Construir objeto usuario con los datos del formulario
-        const usuarioActualizado = {
-            id: parseInt(id),
-            nombre: formularioElement.querySelector('[name="nombre"]').value,
-            // Asegurar que sea number o null
-            telefono: formularioElement.querySelector('[name="telefono"]').value 
-                ? parseInt(formularioElement.querySelector('[name="telefono"]').value) 
-                : null,
-            email: formularioElement.querySelector('[name="email"]').value,
-            fecha_cumple: formularioElement.querySelector('[name="fecha_cumple"]').value,
-        };
-
-        // Buscar y actualizar en el array
-        const index = datosSimulados.findIndex(u => u.id === parseInt(id));
-        if (index !== -1) {
-            datosSimulados[index] = usuarioActualizado;
-            mostrarToast(`Contacto ${usuarioActualizado.nombre} actualizado.`, 'exito');
+    const cargarContactosDesdeDB = async () => {
+        try {
+            const response = await fetch('php/obtener_contactos.php');
+            const data = await response.json();
             
-            // Recargar la lista para reflejar cambios
-            cargarUsuarios(); 
+            if (data.success) {
+                datosSimulados = data.contactos;
+                filtrarYRenderizarUsuarios();
+            } else {
+                if (data.message === 'Sesión no válida') {
+                    mostrarToast('Sesión expirada. Redirigiendo...', 'peligro');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    mostrarToast('Error al cargar contactos', 'peligro');
+                }
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarToast('Error de conexión al cargar contactos', 'peligro');
         }
     };
 
     /**
-     * Elimina un usuario del array de datos simulados.
-     * Muestra notificación y recarga la lista.
-     * 
+     * Guarda las modificaciones de un usuario editado en la DB
+     * @async
+     * @function
+     * @param {string|number} id - ID del usuario a actualizar
+     * @param {HTMLFormElement} formularioElement - Formulario con los datos
+     */
+    const guardarEdicionUsuario = async (id, formularioElement) => {
+        const formData = new FormData();
+        formData.append('id', id);
+        formData.append('nombre', formularioElement.querySelector('[name="nombre"]').value);
+        
+        // Obtener valores (pueden ser vacíos)
+        const telefonoValue = formularioElement.querySelector('[name="telefono"]').value;
+        const emailValue = formularioElement.querySelector('[name="email"]').value;
+        const fechaValue = formularioElement.querySelector('[name="fecha_cumple"]').value;
+        
+        // Agregar al FormData (el backend maneja los vacíos)
+        formData.append('telefono', telefonoValue || '');
+        formData.append('email', emailValue || '');
+        formData.append('fecha_cumple', fechaValue || '');
+        
+        try {
+            const response = await fetch('php/editar_contacto.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            // Verificar que la respuesta sea OK
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                mostrarToast('Contacto actualizado exitosamente', 'exito');
+                cargarContactosDesdeDB(); // Recargar desde DB
+            } else {
+                console.error('Error del servidor:', data);
+                mostrarToast(data.message || 'Error al actualizar', 'peligro');
+            }
+        } catch (error) {
+            console.error('Error completo:', error);
+            mostrarToast('Error de conexión: ' + error.message, 'peligro');
+        }
+    };
+
+    /**
+     * Elimina un usuario de la base de datos
+     * @async
      * @function
      * @param {string|number} id - ID del usuario a eliminar
-     * @returns {void}
      */
-    const eliminarUsuario = (id) => {
-        const usuarioEliminado = datosSimulados.find(u => u.id === parseInt(id));
-        datosSimulados = datosSimulados.filter(u => u.id !== parseInt(id));
-        mostrarToast(`Contacto ${usuarioEliminado?.nombre || 'eliminado'} eliminado.`, 'peligro');
-        cargarUsuarios(); 
+    const eliminarUsuario = async (id) => {
+        const formData = new FormData();
+        formData.append('id', id);
+        
+        try {
+            const response = await fetch('php/eliminar_contacto.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                mostrarToast('Contacto eliminado exitosamente', 'peligro');
+                cargarContactosDesdeDB(); // Recargar desde DB
+            } else {
+                mostrarToast(data.message || 'Error al eliminar', 'peligro');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarToast('Error de conexión', 'peligro');
+        }
     };
     
     /**
-     * Simula la exportación de usuarios a formato CSV.
-     * En producción, generaría y descargaría un archivo CSV real.
-     * 
+     * Exporta usuarios a CSV (simulado)
      * @function
-     * @returns {void}
      */
     const exportarUsuariosCSV = () => {
-        console.log("SIMULADO: Generando CSV de usuarios (Revisa la consola).");
+        console.log("SIMULADO: Generando CSV de usuarios");
         mostrarToast("Exportación a CSV terminada.", 'info');
     };
 
@@ -204,71 +202,47 @@ document.addEventListener('DOMContentLoaded', () => {
     // ========================================================================
     
     /**
-     * Muestra una notificación tipo toast en la parte superior de la pantalla.
-     * El toast aparece con animación, permanece 3 segundos y se elimina automáticamente.
-     * 
+     * Muestra notificación toast
      * @function
-     * @param {string} mensaje - Texto a mostrar en la notificación
-     * @param {('exito'|'peligro'|'info')} [tipo='info'] - Tipo de notificación que define el estilo visual
-     * @returns {void}
-     * 
-     * @example
-     * mostrarToast('Usuario guardado correctamente', 'exito');
-     * mostrarToast('Error al eliminar', 'peligro');
+     * @param {string} mensaje - Texto a mostrar
+     * @param {string} tipo - Tipo de notificación ('exito'|'peligro'|'info')
      */
     function mostrarToast(mensaje, tipo = 'info') {
         if (!toastContainer) return;
 
-        // Crear elemento toast
         const toast = document.createElement('div');
         toast.classList.add('toast', tipo);
         toast.textContent = mensaje;
         
-        // Añadir al DOM
         toastContainer.appendChild(toast);
         
-        // Mostrar con transición (pequeño delay para activar la animación)
-        setTimeout(() => {
-            toast.classList.add('mostrar');
-        }, 10); 
+        setTimeout(() => toast.classList.add('mostrar'), 10);
 
-        // Programar ocultamiento y eliminación del DOM
         setTimeout(() => {
             toast.classList.remove('mostrar');
-            // Eliminar después de que termine la transición CSS
             toast.addEventListener('transitionend', () => {
                 toast.remove();
             }, { once: true });
-        }, 3000); // Visible durante 3 segundos
+        }, 3000);
     }
 
-
     /**
-     * Alterna la visibilidad de un panel lateral específico.
-     * Cierra otros paneles abiertos y ajusta el desplazamiento del contenido principal.
-     * 
+     * Alterna la visibilidad de un panel lateral
      * @function
-     * @param {string} panelId - ID del panel a alternar (debe coincidir con IDs en sidebarPanels)
-     * @returns {void}
-     * 
-     * @example
-     * togglePanel('form-crear-usuario-panel'); // Abre/cierra el panel de creación
+     * @param {string} panelId - ID del panel a alternar
      */
     function togglePanel(panelId) {
         const targetPanel = document.getElementById(panelId);
         if (!targetPanel) return;
 
-        // Cerrar todos los demás paneles
         Object.values(sidebarPanels).forEach(panel => {
             if (panel && panel.id !== panelId && panel.classList.contains('mostrar')) {
                 panel.classList.remove('mostrar');
             }
         });
 
-        // Alternar el panel objetivo
         targetPanel.classList.toggle('mostrar');
 
-        // Desplazar el contenido principal si hay algún panel abierto
         const isAnyPanelOpen = Object.values(sidebarPanels).some(panel => 
             panel && panel.classList.contains('mostrar')
         );
@@ -281,55 +255,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Crea el elemento HTML completo de una tarjeta de usuario.
-     * Incluye la información visible, detalles ocultos y formulario de edición.
-     * 
+     * Crea el elemento HTML de una tarjeta de usuario
      * @function
-     * @param {Object} usuario - Objeto con los datos del usuario
-     * @param {number} usuario.id - ID único del usuario
-     * @param {string} usuario.nombre - Nombre completo del usuario
-     * @param {number|null} usuario.telefono - Número de teléfono (puede ser null)
-     * @param {string} usuario.email - Dirección de correo electrónico
-     * @param {string} usuario.fecha_cumple - Fecha de cumpleaños (formato YYYY-MM-DD)
-     * @returns {HTMLElement} Elemento div con la tarjeta completa
-     * 
-     * @example
-     * const tarjeta = crearTarjetaUsuario({
-     *   id: 1,
-     *   nombre: 'Juan Pérez',
-     *   telefono: 5512345678,
-     *   email: 'juan@ejemplo.com',
-     *   fecha_cumple: '1990-05-15'
-     * });
+     * @param {Object} usuario - Datos del usuario
+     * @returns {HTMLElement} Tarjeta de usuario
      */
     const crearTarjetaUsuario = (usuario) => {
         const usuarioDiv = document.createElement('div');
         usuarioDiv.classList.add('usuario-card');
         usuarioDiv.dataset.usuarioId = usuario.id;
 
-        // Preparar valores para los inputs (convertir null a string vacío)
         const telefonoVal = usuario.telefono !== null ? String(usuario.telefono) : '';
         const emailVal = usuario.email || '';
         const fechaVal = usuario.fecha_cumple || '';
 
-        // Formatear fecha para visualización legible
         const fechaDisplay = usuario.fecha_cumple ? 
-			new Date(usuario.fecha_cumple + 'T12:00:00').toLocaleDateString('es-ES', { 
-				year: 'numeric', 
-				month: 'long', 
-				day: 'numeric' 
-			}) : 'N/A';
+            new Date(usuario.fecha_cumple + 'T12:00:00').toLocaleDateString('es-ES', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            }) : 'N/A';
 
-        // Construir HTML de la tarjeta
         usuarioDiv.innerHTML = `
-            <!-- Encabezado: Nombre e icono del usuario -->
             <div class="contenedor-nombre-icono">
                 <span class="icono-usuario-card">
                     <i data-feather="user"></i>
                 </span>
                 <h3 class="nombre-usuario-card">${usuario.nombre}</h3>
                 
-                <!-- Menú de opciones (Editar/Eliminar) -->
                 <div class="opciones-card">
                     <button class="menu-opciones-btn">
                         <i data-feather="more-vertical"></i>
@@ -351,14 +304,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             
-            <!-- Información detallada (oculta por defecto) -->
             <div class="info-oculta" style="display: none;">
                 <p class="detalle-usuario">Teléfono: ${usuario.telefono || 'N/A'}</p>
                 <p class="detalle-usuario">Email: ${usuario.email || 'N/A'}</p>
                 <p class="detalle-usuario">Fecha de Cumpleaños: ${fechaDisplay}</p>
             </div>
             
-            <!-- Formulario de edición (oculto por defecto) -->
             <form class="form-editar-usuario" data-usuario-id="${usuario.id}" style="display: none;">
                 <div>
                     <label for="edit-nombre-${usuario.id}">Nombre:</label>
@@ -387,17 +338,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     /**
-     * Ordena (si hay ordenamiento activo) y renderiza la lista de usuarios en el DOM.
-     * Limpia el contenedor y crea tarjetas para cada usuario.
-     * * @function
+     * Ordena y renderiza la lista de usuarios
+     * @function
      * @param {Array<Object>} usuarios - Array de usuarios a renderizar
-     * @returns {void}
      */
     const renderizarUsuarios = (usuarios) => {
-        // Crear copia para no mutar el array original
         let usuariosOrdenados = [...usuarios];
 
-        // Aplicar ordenamiento según estado actual
         if (ordenamientoActivo === 'nombre') {
             usuariosOrdenados.sort((a, b) => a.nombre.localeCompare(b.nombre));
         } else if (ordenamientoActivo === 'fecha_cumple') {
@@ -408,28 +355,22 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Limpiar contenedor
         listaUsuariosDiv.innerHTML = '';
 
-        // Mostrar mensaje si no hay usuarios
         if (usuariosOrdenados.length === 0) {
             listaUsuariosDiv.textContent = 'No se encontraron usuarios.';
         }
 
-        // Determinar si hay filtros activos (buscador o filtros de fecha)
-        // Si hay un término de búsqueda O si hay algún filtro de fecha aplicado
         const hayFiltrosActivos = buscadorInput.value.trim() !== '' ||
                                 filtroDiaInput.value !== '' || 
                                 filtroMesSelect.value !== '' || 
                                 filtroAnioInput.value !== '';
 
-        // Crear y añadir tarjetas de usuarios
         usuariosOrdenados.forEach(usuario => {
             const usuarioDiv = crearTarjetaUsuario(usuario);
             if (hayFiltrosActivos) {
                 const infoOculta = usuarioDiv.querySelector('.info-oculta');
                 if (infoOculta) {
-                    // Forzar la visibilidad a 'block' para que la información se vea.
                     infoOculta.style.display = 'block'; 
                 }
             }
@@ -437,22 +378,17 @@ document.addEventListener('DOMContentLoaded', () => {
             listaUsuariosDiv.appendChild(usuarioDiv);
         });
 
-        // Activar iconos de Feather (si está disponible)
         if (typeof feather !== 'undefined' && feather.replace) { 
             feather.replace();
         }
     };
         
     /**
-     * Muestra el formulario de edición para un usuario específico.
-     * Oculta otros formularios de edición abiertos y la información detallada.
-     * 
+     * Muestra el formulario de edición
      * @function
-     * @param {string|number} usuarioId - ID del usuario cuyo formulario se mostrará
-     * @returns {void}
+     * @param {string|number} usuarioId - ID del usuario
      */
     function mostrarFormularioEdicion(usuarioId) {
-        // Ocultar todos los demás formularios de edición activos
         document.querySelectorAll('.usuario-card.editando').forEach(card => {
             const form = card.querySelector('.form-editar-usuario');
             if (form) {
@@ -462,20 +398,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Obtener la tarjeta del usuario objetivo
         const card = document.querySelector(`.usuario-card[data-usuario-id="${usuarioId}"]`);
         if (!card) return;
 
         const form = card.querySelector('.form-editar-usuario');
         const infoOculta = card.querySelector('.info-oculta');
 
-        // Verificar que el usuario existe en los datos
-        const usuario = datosSimulados.find(u => u.id === parseInt(usuarioId));
-        if (usuario) {
-            // Los valores ya están en el formulario desde crearTarjetaUsuario
-        }
-
-        // Mostrar formulario y marcar tarjeta como en edición
         form.style.display = 'block';
         if (infoOculta) {
             infoOculta.style.display = 'none';
@@ -484,20 +412,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Valida los campos de un formulario (crear/editar) o los filtros de fecha.
-     * Comprueba formato de email, teléfono y rangos válidos para día/año.
-     * * @function
-     * @param {HTMLFormElement} [formulario] - Formulario a validar (opcional para validar filtros)
-     * @returns {boolean} true si la validación es exitosa, false en caso contrario
-     * * @example
-     * // Validar formulario de creación
-     * if (validarFormulario(formCrearUsuario)) {
-     *   // proceder con la creación
-     * }
-     * * // Validar filtros de fecha
-     * if (validarFormulario()) {
-     *   // aplicar filtros
-     * }
+     * Valida formularios y filtros
+     * @function
+     * @param {HTMLFormElement} [formulario] - Formulario a validar
+     * @returns {boolean} Resultado de la validación
      */
     function validarFormulario(formulario) {
         let esValido = true;
@@ -505,7 +423,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const telefonoInput = formulario?.querySelector('[name="telefono"]');
         let errores = [];
 
-        // === Validación de Email ===
         if (emailInput && emailInput.value) {
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(emailInput.value)) {
@@ -514,7 +431,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // === Validación de Teléfono ===
         if (telefonoInput && telefonoInput.value) {
             const telefonoRegex = /^[0-9]{7,15}$/;
             if (!telefonoRegex.test(telefonoInput.value)) {
@@ -523,62 +439,48 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // === Validación de Filtros de Fecha ===
         const diaFiltroInput = document.getElementById('filtro-dia-menu');
         const anioFiltroInput = document.getElementById('filtro-anio-menu');
 
-        // Solo validar filtros si no estamos validando un formulario específico
         if (formulario === undefined || formulario.id === 'filtrar-opciones') {
-            // Validar día (1-31)
-			if (diaFiltroInput && diaFiltroInput.value) {
-				const diaStr = diaFiltroInput.value.trim();
-				
-				// Expresión Regular estricta para: 1-9, 01-09, 10-31, PERO TOLERANTE CON SOLO '0' para permitir escribir '01'
-				const diaRegex = /^(0?[1-9]|[12]\d|3[01])$/;
+            if (diaFiltroInput && diaFiltroInput.value) {
+                const diaStr = diaFiltroInput.value.trim();
+                const diaRegex = /^(0?[1-9]|[12]\d|3[01])$/;
 
-                // Permitimos que solo haya un '0' para que el usuario pueda escribir el segundo dígito.
-                // Si es solo '0', no se considera un error. Si es '00', sí es un error.
                 if (diaStr === '0') {
-                    // Temporalmente válido, permitiendo al usuario continuar escribiendo 01-09.
+                    // Permitir temporalmente
                 } else if (!diaRegex.test(diaStr)) {
-					// Lanzamos error si no coincide con el formato DD o D y el rango 1-31
-					errores.push('El día debe ser un número entre 1 y 31 (solo se permite 1 o 2 dígitos, ej. 5 o 05).');
-					esValido = false;
-				} else {
-					// Comprobación redundante pero segura del rango numérico
-					const dia = parseInt(diaStr, 10);
-					if (isNaN(dia) || dia < 1 || dia > 31) {
-						errores.push('El día de filtro debe ser un número entre 1 y 31.');
-						esValido = false;
-					}
-				}
-			}
-            
-            // Validar año (mínimo 1925)
-			if (anioFiltroInput && anioFiltroInput.value) {
-				const anioStr = anioFiltroInput.value.trim();
-
-				// 1. Asegurar que solo contiene dígitos
-				if (!/^\d+$/.test(anioStr)) {
-					errores.push('El año de filtro debe contener solo números enteros.');
-					esValido = false;
-				} else if (anioStr.length === 4) { // Solo validamos el rango si ya tiene 4 dígitos
-					const anio = parseInt(anioStr, 10);
-					
-					// 2. Validar rango
-					if (isNaN(anio) || anio < 1925) {
-						errores.push('El año de filtro es inválido (mínimo 1925).');
-						esValido = false;
-					}
-				} else if (anioStr.length > 4) {
-                    errores.push('El año de filtro no puede tener más de 4 dígitos.');
-					esValido = false;
+                    errores.push('El día debe ser un número entre 1 y 31.');
+                    esValido = false;
+                } else {
+                    const dia = parseInt(diaStr, 10);
+                    if (isNaN(dia) || dia < 1 || dia > 31) {
+                        errores.push('El día de filtro debe ser un número entre 1 y 31.');
+                        esValido = false;
+                    }
                 }
-				// Si tiene 1, 2 o 3 dígitos (ej. '1', '19', '192'), y son números, se asume temporalmente válido.
-			}
+            }
+            
+            if (anioFiltroInput && anioFiltroInput.value) {
+                const anioStr = anioFiltroInput.value.trim();
+
+                if (!/^\d+$/.test(anioStr)) {
+                    errores.push('El año de filtro debe contener solo números enteros.');
+                    esValido = false;
+                } else if (anioStr.length === 4) {
+                    const anio = parseInt(anioStr, 10);
+                    
+                    if (isNaN(anio) || anio < 1925) {
+                        errores.push('El año de filtro es inválido (mínimo 1925).');
+                        esValido = false;
+                    }
+                } else if (anioStr.length > 4) {
+                    errores.push('El año de filtro no puede tener más de 4 dígitos.');
+                    esValido = false;
+                }
+            }
         }
 
-        // Mostrar errores si los hay
         if (!esValido && errores.length > 0) {
             mostrarToast("⚠️ Error:\n" + errores.join('\n'), 'peligro');
             return false; 
@@ -587,23 +489,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return esValido;
     }
 
-
     /**
-     * Aplica filtros de búsqueda y fecha, luego renderiza la lista resultante.
-     * Función principal que combina búsqueda por texto y filtrado por fecha de cumpleaños.
-     * 
+     * Aplica filtros y renderiza la lista
      * @function
-     * @returns {void}
-     * 
-     * @description
-     * Proceso de filtrado:
-     * 1. Valida filtros de fecha si están activos
-     * 2. Filtra por término de búsqueda (nombre, email, teléfono)
-     * 3. Filtra por fecha de cumpleaños (día, mes, año)
-     * 4. Renderiza la lista resultante
      */
     const filtrarYRenderizarUsuarios = () => {
-        // Validar filtros de fecha antes de aplicar
         if ((filtroDiaInput.value || filtroMesSelect.value || filtroAnioInput.value)) {
             if (!validarFormulario()) {
                 listaUsuariosDiv.textContent = 'Filtros de fecha inválidos. Por favor, corrígelos.';
@@ -611,55 +501,44 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Obtener valores de los filtros
         const terminoBusqueda = buscadorInput.value.toLowerCase();
         const filtroDia = filtroDiaInput.value;
         const filtroMesAbreviado = filtroMesSelect.value;
         const filtroAnio = filtroAnioInput.value;
 
-        // Aplicar filtros
         let datosFiltrados = datosSimulados.filter(usuario => {
-            
-            // === Filtro de Búsqueda ===
-            // Buscar en nombre, email y teléfono
             const coincideBusqueda = usuario.nombre.toLowerCase().includes(terminoBusqueda) ||
                                      (usuario.email && usuario.email.toLowerCase().includes(terminoBusqueda)) ||
                                      (usuario.telefono && String(usuario.telefono).includes(terminoBusqueda));
             
             if (!coincideBusqueda) return false;
 
-            // === Filtro por Fecha de Cumpleaños ===
-			if (usuario.fecha_cumple) {
-				const [anio, mes, dia] = usuario.fecha_cumple.split('-');
-				
-				// Filtrar por día
-				if (filtroDia) {
-					const filtroDiaNormalizado = String(filtroDia).padStart(2, '0');
-					if (dia !== filtroDiaNormalizado) return false;
-				}
+            if (usuario.fecha_cumple) {
+                const [anio, mes, dia] = usuario.fecha_cumple.split('-');
+                
+                if (filtroDia) {
+                    const filtroDiaNormalizado = String(filtroDia).padStart(2, '0');
+                    if (dia !== filtroDiaNormalizado) return false;
+                }
 
-				// Filtrar por mes (convertir abreviatura a número)
-				if (filtroMesAbreviado) { // Si el usuario eligió un mes (no el valor vacío/default)
-					const mesNumero = mesesMapping[filtroMesAbreviado];
-					if (mes !== mesNumero) return false;
-				}
+                if (filtroMesAbreviado) {
+                    const mesNumero = mesesMapping[filtroMesAbreviado];
+                    if (mes !== mesNumero) return false;
+                }
 
-				// Filtrar por año
-				if (filtroAnio && anio !== filtroAnio) return false;
-			}
+                if (filtroAnio && anio !== filtroAnio) return false;
+            }
             
             return true;
         });
 
-        // Actualizar lista actual y renderizar
         listaUsuariosActual = datosFiltrados;
         renderizarUsuarios(listaUsuariosActual);
     };
 
     /**
-     * Abre el buscador animado y enfoca el input.
+     * Abre el buscador
      * @function
-     * @returns {void}
      */
     function openSearch() {
         buscadorWrapper.classList.add('active');
@@ -667,9 +546,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Cierra el buscador animado, limpia el input y refresca la lista.
+     * Cierra el buscador
      * @function
-     * @returns {void}
      */
     function closeSearch() {
         buscadorWrapper.classList.remove('active');
@@ -678,10 +556,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     /**
-     * Alterna entre abrir y cerrar el buscador.
+     * Alterna el buscador
      * @function
-     * @param {Event} e - Evento del click
-     * @returns {void}
      */
     function toggleSearch(e) {
         e.stopPropagation();
@@ -697,9 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // V. MANEJADORES DE EVENTOS
     // ========================================================================
 
-    // ------------------------------------------------------------------------
-    // Eventos de la Sidebar (Menú Principal)
-    // ------------------------------------------------------------------------
+    // Eventos de la Sidebar
     crearUsuarioMenuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         togglePanel('form-crear-usuario-panel');
@@ -715,55 +589,58 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePanel('ordenar-opciones');
     });
 
-    // ------------------------------------------------------------------------
-    // Evento de Creación de Usuario
-    // ------------------------------------------------------------------------
-    formCrearUsuario.addEventListener('submit', (event) => {
+    // Evento de Creación de Usuario (MODIFICADO - ASYNC)
+    formCrearUsuario.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        if (validarFormulario(formCrearUsuario)) {
-            const nuevoUsuario = {
-                id: nextId++,
-                nombre: document.getElementById('nombre').value,
-                telefono: document.getElementById('telefono').value 
-                    ? parseInt(document.getElementById('telefono').value) 
-                    : null,
-                email: document.getElementById('email').value,
-                fecha_cumple: document.getElementById('fecha_cumple').value
-            };
+        if (!validarFormulario(formCrearUsuario)) return;
 
-            datosSimulados.push(nuevoUsuario);
-            formCrearUsuario.reset();
-            mostrarToast(`Contacto ${nuevoUsuario.nombre} creado exitosamente.`, 'exito');
-            togglePanel('form-crear-usuario-panel');
-            cargarUsuarios();
+        const formData = new FormData(formCrearUsuario);
+        
+        try {
+            const response = await fetch('php/crear_contacto.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                const nuevoNombre = document.getElementById('nombre').value;
+                mostrarToast(`Contacto ${nuevoNombre} creado exitosamente.`, 'exito');
+                formCrearUsuario.reset();
+                togglePanel('form-crear-usuario-panel');
+                cargarContactosDesdeDB();
+            } else {
+                mostrarToast(data.message || 'Error al crear contacto', 'peligro');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            mostrarToast('Error de conexión', 'peligro');
         }
     });
 
-    // ------------------------------------------------------------------------
-    // Delegación de eventos para interacciones en las tarjetas (clicks)
-    // ------------------------------------------------------------------------
+    // Delegación de eventos para tarjetas
     listaUsuariosDiv.addEventListener('click', (event) => {
         const botonOpciones = event.target.closest('.menu-opciones-btn');
         const tarjeta = event.target.closest('.usuario-card');
         const opcionMenu = event.target.closest('.opcion-menu');
         const botonCancelar = event.target.closest('.cancelar-edicion');
 
-        // Toggle del Menú Desplegable (3 puntos)
+        // Toggle del Menú Desplegable
         if (botonOpciones) {
             event.stopPropagation();
             const card = botonOpciones.closest('.usuario-card');
             const menuDesplegable = card.querySelector('.menu-desplegable');
             if (menuDesplegable) menuDesplegable.classList.toggle('mostrar');
 
-            // Cerrar otros menús abiertos
             listaUsuariosDiv.querySelectorAll('.menu-desplegable.mostrar').forEach(menu => {
                 if (menu !== menuDesplegable) menu.classList.remove('mostrar');
             });
             return;
         }
 
-        // Acciones del Menú (Editar / Eliminar)
+        // Acciones del Menú
         if (opcionMenu) {
             event.stopPropagation();
             const action = opcionMenu.dataset.action;
@@ -793,7 +670,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Mostrar/Ocultar información al hacer click en la tarjeta (si no está en edición y no se clickeó control)
+        // Mostrar/Ocultar información
         if (tarjeta && 
             !tarjeta.classList.contains('editando') &&
             !event.target.closest('button') &&
@@ -811,10 +688,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ------------------------------------------------------------------------
-    // Evento de Submit del Formulario de Edición (ÚNICO listener)
-    // ------------------------------------------------------------------------
-    listaUsuariosDiv.addEventListener('submit', (event) => {
+    // Submit del Formulario de Edición (MODIFICADO - ASYNC)
+    listaUsuariosDiv.addEventListener('submit', async (event) => {
         const formEdicion = event.target.closest('.form-editar-usuario');
         if (!formEdicion) return;
 
@@ -825,10 +700,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const usuarioId = formEdicion.dataset.usuarioId;
 
         if (validarFormulario(formEdicion)) {
-            // guardarEdicionUsuario debe mostrar UN único toast
-            guardarEdicionUsuario(usuarioId, formEdicion);
+            await guardarEdicionUsuario(usuarioId, formEdicion);
 
-            // Ocultar formulario y restaurar estado visual
             formEdicion.style.display = 'none';
             if (usuarioDiv) {
                 usuarioDiv.classList.remove('editando');
@@ -838,9 +711,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ------------------------------------------------------------------------
-    // Eventos Globales para Cierre de UI (mantengo tu lógica original)
-    // ------------------------------------------------------------------------
+    // Eventos Globales
     document.addEventListener('click', (event) => {
         const estaEnTarjeta = event.target.closest('.usuario-card');
         const estaEnMenu = event.target.closest('.menu-opciones-btn');
@@ -851,28 +722,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const estaEnBuscador = event.target.closest('.search-wrapper');
         const estaEnMain = event.target.closest('main');
 
-        // Cerrar menús desplegables
         if (!estaEnTarjeta && !estaEnMenu) {
             listaUsuariosDiv.querySelectorAll('.menu-desplegable.mostrar')
                 .forEach(menu => menu.classList.remove('mostrar'));
         }
 
-        // Cerrar paneles laterales
         if (!estaEnSidebar && !estaEnPanel) {
             Object.values(sidebarPanels).forEach(panel => panel?.classList.remove('mostrar'));
             mainContent.classList.remove('desplazado');
         }
 
-        // Cerrar info oculta si no está editando
         if (!estaEnTarjeta && !estaEnBuscador && !estaEnMain) {
             listaUsuariosDiv.querySelectorAll('.usuario-card:not(.editando) .info-oculta')
                 .forEach(info => { info.style.display = 'none'; });
         }
     });
 
-    // ------------------------------------------------------------------------
-    // Eventos de Filtro y Búsqueda (mantener tus enlaces a funciones existentes)
-    // ------------------------------------------------------------------------
+    // Eventos de Filtro y Búsqueda
     buscadorInput.addEventListener('input', filtrarYRenderizarUsuarios);
     filtroDiaInput.addEventListener('input', filtrarYRenderizarUsuarios);
     filtroMesSelect.addEventListener('change', filtrarYRenderizarUsuarios);
@@ -898,12 +764,11 @@ document.addEventListener('DOMContentLoaded', () => {
         togglePanel('ordenar-opciones');
     });
 
-    // Evento de exportar (si existe)
     if (exportarMenuBtn) {
         exportarMenuBtn.addEventListener('click', exportarUsuariosCSV);
     }
 
-    // Eventos del buscador animado (mantén los tuyos)
+    // Eventos del buscador
     buscadorIcon.addEventListener('click', toggleSearch);
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && buscadorWrapper.classList.contains('active')) {
@@ -921,9 +786,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // VI. INICIALIZACIÓN
     // ========================================================================
     
-    /**
-     * Carga inicial de la lista de usuarios al cargar la página.
-     */
-    cargarUsuarios(); 
+    cargarContactosDesdeDB();
     
 }); // Fin de DOMContentLoaded
