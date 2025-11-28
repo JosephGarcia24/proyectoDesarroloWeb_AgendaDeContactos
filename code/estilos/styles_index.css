@@ -935,3 +935,136 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     font-weight: bold;
     font-size: 16px;
 }
+
+
+/* ====================================================================== */
+/* ESTILOS MODERNOS PARA INPUT DATE (CALENDARIO)                          */
+/* ====================================================================== */
+
+/* Contenedor del input date */
+input[type="date"] {
+    position: relative;
+    padding: 12px 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    width: 100%;
+    box-sizing: border-box;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    color: #f0f0f0;
+    font-family: "Poppins", sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Hover effect */
+input[type="date"]:hover {
+    border-color: rgba(129, 140, 248, 0.6);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
+    box-shadow: 0 6px 12px rgba(129, 140, 248, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
+}
+
+/* Focus effect */
+input[type="date"]:focus {
+    outline: none;
+    border-color: rgba(129, 140, 248, 0.8);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+    box-shadow: 
+        0 0 0 4px rgba(129, 140, 248, 0.15),
+        0 8px 16px rgba(129, 140, 248, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+/* Estilo del ícono del calendario */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    background: rgba(129, 140, 248, 0.2);
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+/* Estilo cuando está deshabilitado */
+input[type="date"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Placeholder/valor vacío */
+input[type="date"]:invalid {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+input[type="date"]:valid {
+    color: #f0f0f0;
+}
+
+/* Animación al abrir el calendario */
+@keyframes calendar-open {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Estilo del dropdown del calendario (Chrome/Edge) */
+input[type="date"]::-webkit-calendar-picker-indicator:focus-within {
+    animation: calendar-open 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Mejoras para el calendario en formularios específicos */
+#form-crear-usuario input[type="date"],
+.form-editar-usuario input[type="date"] {
+    background: linear-gradient(135deg, rgba(129, 140, 248, 0.1), rgba(118, 75, 162, 0.1));
+    border-color: rgba(129, 140, 248, 0.3);
+}
+
+#form-crear-usuario input[type="date"]:hover,
+.form-editar-usuario input[type="date"]:hover {
+    border-color: rgba(129, 140, 248, 0.5);
+    box-shadow: 0 6px 12px rgba(129, 140, 248, 0.25);
+}
+
+#form-crear-usuario input[type="date"]:focus,
+.form-editar-usuario input[type="date"]:focus {
+    border-color: rgba(129, 140, 248, 0.8);
+    box-shadow: 
+        0 0 0 4px rgba(129, 140, 248, 0.2),
+        0 8px 20px rgba(129, 140, 248, 0.35);
+}
+
+/* Etiquetas con ícono para fechas */
+label[for="fecha_cumple"]::before,
+label:has(+ input[type="date"])::before {
+    content: "📅 ";
+    margin-right: 4px;
+    font-size: 16px;
+    vertical-align: middle;
+}
+
+/* Transiciones suaves globales para inputs date */
+input[type="date"] * {
+    transition: all 0.2s ease;
+}
+
+/*-----------------------------FIN FILTRO POR FECHA-----------------------------------*/
